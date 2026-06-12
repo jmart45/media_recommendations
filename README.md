@@ -13,7 +13,7 @@ A personal media tracking and recommendation app powered by Claude. Chat natural
 
 ## Prerequisites
 
-- Python 3.8 or newer
+- Python 3.12 or newer
 - An Anthropic API key — get one at [console.anthropic.com](https://console.anthropic.com)
 
 ## Setup
