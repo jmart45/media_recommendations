@@ -2,3 +2,5 @@ anthropic
 fastapi
 uvicorn[standard]
 aiofiles
+pytest
+pytest-asyncio
