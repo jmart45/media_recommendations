@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* Dark theme palette, ported from the original app's CSS variables.
+   Exposed to Tailwind as color tokens, so `bg-surface`, `text-muted`,
+   `border-border`, etc. are all available as utilities. */
+@theme {
+  --color-bg: #0f0f13;
+  --color-surface: #1a1a22;
+  --color-surface2: #22222e;
+  --color-border: #2e2e3e;
+  --color-accent: #7c6af7;
+  --color-accent2: #a78bfa;
+  --color-text: #e2e2f0;
+  --color-muted: #8888aa;
+  --color-user: #2d2a4a;
+  --color-assistant: #1e1e2a;
+  --color-star: #f0b429;
+  --color-tool: #151520;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Thin dark scrollbars, matching the original. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
