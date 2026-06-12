@@ -1,0 +1,23 @@
+{
+  "page_title": "Recomendaciones de Medios",
+  "sidebar_heading": "Mis Medios",
+  "refresh_title": "Actualizar",
+  "no_types": "Aún no hay tipos de medios.",
+  "no_types_hint": "¡Empieza a chatear para añadir algunos!",
+  "chat_heading": "🎬 Recomendaciones de Medios",
+  "chat_subtitle": "Chatea para registrar medios, calificaciones y obtener recomendaciones personalizadas.",
+  "welcome_intro": "¡Hola! Soy tu asistente de seguimiento de medios. Puedo ayudarte a:",
+  "welcome_items": [
+    { "label": "Añadir tipos de medios",    "example": "Añade Películas y Videojuegos como tipos de medios" },
+    { "label": "Registrar medios",          "example": "Vi Dune y le doy un 4.5, es ciencia ficción" },
+    { "label": "Marcar como no visto",      "example": "Añade Elden Ring a Videojuegos, aún no lo he jugado" },
+    { "label": "Obtener recomendaciones",   "example": "Recomiéndame películas de terror" },
+    { "label": "Actualizar calificaciones", "example": "Actualiza mi calificación de Inception a 5" }
+  ],
+  "welcome_outro": "¿Qué te gustaría hacer?",
+  "input_placeholder": "Pídeme que registre medios o que te dé recomendaciones...",
+  "send_title": "Enviar",
+  "no_items": "Sin elementos aún",
+  "unrated": "sin calificar",
+  "error_message": "Lo sentimos, algo salió mal. Por favor, inténtalo de nuevo."
+}

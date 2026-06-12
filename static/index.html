@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Media Recommendations</title>
+<title data-i18n="page_title">Media Recommendations</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -19,9 +19,6 @@
     --user-bubble: #2d2a4a;
     --assistant-bubble: #1e1e2a;
     --star-on: #f0b429;
-    --star-off: #3a3a4a;
-    --success: #34d399;
-    --danger: #f87171;
     --tool-bg: #151520;
   }
 
@@ -61,6 +58,21 @@
     color: var(--text-muted);
   }
 
+  #sidebar-controls { display: flex; gap: 6px; align-items: center; }
+
+  #lang-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 3px 6px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  #lang-select:hover, #lang-select:focus { border-color: var(--accent); color: var(--text); }
+
   #refresh-btn {
     background: none;
     border: none;
@@ -73,11 +85,7 @@
   }
   #refresh-btn:hover { color: var(--accent2); background: var(--surface2); }
 
-  #media-list {
-    overflow-y: auto;
-    flex: 1;
-    padding: 8px 0;
-  }
+  #media-list { overflow-y: auto; flex: 1; padding: 8px 0; }
 
   .media-type-section { margin-bottom: 4px; }
 
@@ -106,10 +114,7 @@
 
   .type-icon { font-size: 1.1rem; }
 
-  .media-items {
-    display: none;
-    padding: 2px 8px 4px 16px;
-  }
+  .media-items { display: none; padding: 2px 8px 4px 16px; }
   .media-items.open { display: block; }
 
   .media-item {
@@ -160,19 +165,13 @@
   }
 
   /* ---- Chat ---- */
-  #chat-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+  #chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
   #chat-header {
     padding: 18px 24px 14px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
   }
-
   #chat-header h1 { font-size: 1.1rem; font-weight: 700; }
   #chat-header p { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
 
@@ -185,23 +184,13 @@
     gap: 16px;
   }
 
-  .msg {
-    display: flex;
-    gap: 12px;
-    max-width: 840px;
-    width: 100%;
-    align-self: flex-start;
-  }
-
+  .msg { display: flex; gap: 12px; max-width: 840px; width: 100%; align-self: flex-start; }
   .msg.user { align-self: flex-end; flex-direction: row-reverse; }
 
   .avatar {
-    width: 34px;
-    height: 34px;
+    width: 34px; height: 34px;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     font-size: 1rem;
     flex-shrink: 0;
     background: var(--surface2);
@@ -218,10 +207,7 @@
     line-height: 1.65;
     max-width: calc(100% - 50px);
   }
-  .msg.user .bubble {
-    background: var(--user-bubble);
-    border-color: var(--accent);
-  }
+  .msg.user .bubble { background: var(--user-bubble); border-color: var(--accent); }
 
   .bubble p { margin-bottom: 8px; }
   .bubble p:last-child { margin-bottom: 0; }
@@ -231,9 +217,7 @@
   .bubble code { background: var(--tool-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
 
   .tool-call {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: flex; align-items: center; gap: 8px;
     background: var(--tool-bg);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -247,12 +231,7 @@
   .tool-call .tool-icon { color: var(--accent); }
   .tool-call .tool-name { color: var(--accent2); font-weight: 600; }
 
-  .typing-indicator {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    padding: 4px 0;
-  }
+  .typing-indicator { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
   .typing-indicator span {
     width: 6px; height: 6px;
     background: var(--text-muted);
@@ -272,9 +251,7 @@
     padding: 16px 24px;
     background: var(--surface);
     border-top: 1px solid var(--border);
-    display: flex;
-    gap: 12px;
-    align-items: flex-end;
+    display: flex; gap: 12px; align-items: flex-end;
   }
 
   #user-input {
@@ -299,11 +276,8 @@
     background: var(--accent);
     border: none;
     border-radius: 10px;
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
     cursor: pointer;
     color: #fff;
     font-size: 1.1rem;
@@ -314,7 +288,6 @@
   #send-btn:active { transform: scale(0.95); }
   #send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-  /* ---- Scrollbar ---- */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -325,52 +298,107 @@
 
 <aside id="sidebar">
   <div id="sidebar-header">
-    <h2>My Media</h2>
-    <button id="refresh-btn" title="Refresh">&#8635;</button>
+    <h2 data-i18n="sidebar_heading">My Media</h2>
+    <div id="sidebar-controls">
+      <select id="lang-select" aria-label="Language">
+        <option value="en">EN</option>
+        <option value="es">ES</option>
+      </select>
+      <button id="refresh-btn" data-i18n-title="refresh_title" title="Refresh">&#8635;</button>
+    </div>
   </div>
   <div id="media-list">
-    <div id="no-types">No media types yet.<br>Start chatting to add some!</div>
+    <div id="no-types">
+      <span data-i18n="no_types">No media types yet.</span><br>
+      <span data-i18n="no_types_hint">Start chatting to add some!</span>
+    </div>
   </div>
 </aside>
 
 <main id="chat-area">
   <div id="chat-header">
-    <h1>&#127916; Media Recommendations</h1>
-    <p>Chat to track media, ratings, and get personalized recommendations.</p>
+    <h1 data-i18n="chat_heading">🎬 Media Recommendations</h1>
+    <p data-i18n="chat_subtitle">Chat to track media, ratings, and get personalized recommendations.</p>
   </div>
   <div id="messages">
-    <div class="msg assistant">
+    <div class="msg assistant" id="welcome-msg">
       <div class="avatar">&#129302;</div>
-      <div class="bubble">
-        <p>Hi! I'm your media tracking assistant. I can help you:</p>
-        <ul>
-          <li><strong>Add media types</strong> — e.g. "Add Movies and Games as media types"</li>
-          <li><strong>Track media</strong> — e.g. "I watched Dune and gave it a 4.5, it's sci-fi"</li>
-          <li><strong>Mark as unwatched</strong> — e.g. "Add Elden Ring to Games, haven't played it yet"</li>
-          <li><strong>Get recommendations</strong> — e.g. "Recommend me some horror movies"</li>
-          <li><strong>Update ratings</strong> — e.g. "Update my Inception rating to 5"</li>
-        </ul>
-        <p>What would you like to do?</p>
-      </div>
+      <div class="bubble" id="welcome-bubble"></div>
     </div>
   </div>
   <div id="input-area">
-    <textarea id="user-input" rows="1" placeholder="Ask me to track media or get recommendations..."></textarea>
-    <button id="send-btn" title="Send">&#10148;</button>
+    <textarea id="user-input" rows="1" data-i18n-placeholder="input_placeholder"
+      placeholder="Ask me to track media or get recommendations..."></textarea>
+    <button id="send-btn" data-i18n-title="send_title" title="Send">&#10148;</button>
   </div>
 </main>
 
 <script>
+// ---- i18n ----
+
+const SUPPORTED_LANGS = ['en', 'es'];
+let strings = {};
+
+async function loadLocale(lang) {
+  const res = await fetch(`/static/locales/${lang}.json`);
+  strings = await res.json();
+
+  document.documentElement.lang = lang;
+  localStorage.setItem('lang', lang);
+
+  // Apply to all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (strings[key] !== undefined) el.textContent = strings[key];
+  });
+
+  // Apply placeholder attributes
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (strings[key] !== undefined) el.placeholder = strings[key];
+  });
+
+  // Apply title attributes
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (strings[key] !== undefined) el.title = strings[key];
+  });
+
+  document.title = strings.page_title || document.title;
+
+  renderWelcomeMessage();
+}
+
+function t(key) {
+  return strings[key] || key;
+}
+
+// ---- Welcome message ----
+
+function renderWelcomeMessage() {
+  const bubble = document.getElementById('welcome-bubble');
+  const items = strings.welcome_items || [];
+  bubble.innerHTML = `
+    <p>${escHtml(t('welcome_intro'))}</p>
+    <ul>
+      ${items.map(item =>
+        `<li><strong>${escHtml(item.label)}</strong> — e.g. "${escHtml(item.example)}"</li>`
+      ).join('')}
+    </ul>
+    <p>${escHtml(t('welcome_outro'))}</p>
+  `;
+}
+
+// ---- Sidebar ----
+
 const messagesEl = document.getElementById('messages');
 const inputEl = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const mediaListEl = document.getElementById('media-list');
 const noTypesEl = document.getElementById('no-types');
 
-// Conversation history
 let history = [];
 
-// Type icons map
 const TYPE_ICONS = {
   movies: '🎬', movie: '🎬',
   games: '🎮', game: '🎮',
@@ -387,11 +415,8 @@ function getTypeIcon(name) {
 
 function formatRating(rating) {
   if (rating === null || rating === undefined) return null;
-  const stars = Math.round(rating * 2) / 2;
   return `★ ${rating % 1 === 0 ? rating + '.0' : rating}`;
 }
-
-// ---- Sidebar ----
 
 let openSections = new Set();
 
@@ -413,13 +438,11 @@ function renderSidebar(data) {
     return;
   }
   noTypesEl.remove();
-
   mediaListEl.innerHTML = '';
 
   for (const typeName of types.sort()) {
     const items = data[typeName];
     const isOpen = openSections.has(typeName);
-    const icon = getTypeIcon(typeName);
 
     const section = document.createElement('div');
     section.className = 'media-type-section';
@@ -427,8 +450,8 @@ function renderSidebar(data) {
     const header = document.createElement('div');
     header.className = 'media-type-header' + (isOpen ? ' open' : '');
     header.innerHTML = `
-      <span class="type-icon">${icon}</span>
-      <span>${typeName}</span>
+      <span class="type-icon">${getTypeIcon(typeName)}</span>
+      <span>${escHtml(typeName)}</span>
       <span style="color:var(--text-muted);font-size:0.75rem;margin-left:4px">${items.length}</span>
       <span class="chevron">&#9658;</span>
     `;
@@ -437,7 +460,7 @@ function renderSidebar(data) {
     itemsEl.className = 'media-items' + (isOpen ? ' open' : '');
 
     if (items.length === 0) {
-      itemsEl.innerHTML = '<div class="empty-type">No items yet</div>';
+      itemsEl.innerHTML = `<div class="empty-type">${escHtml(t('no_items'))}</div>`;
     } else {
       for (const item of items.sort((a, b) => a.title.localeCompare(b.title))) {
         const div = document.createElement('div');
@@ -448,7 +471,7 @@ function renderSidebar(data) {
           ${item.genre ? `<span class="item-genre">${escHtml(item.genre)}</span>` : ''}
           ${ratingStr !== null
             ? `<span class="item-rating">${escHtml(ratingStr)}</span>`
-            : `<span class="item-rating unseen">unrated</span>`}
+            : `<span class="item-rating unseen">${escHtml(t('unrated'))}</span>`}
         `;
         itemsEl.appendChild(div);
       }
@@ -457,8 +480,7 @@ function renderSidebar(data) {
     header.addEventListener('click', () => {
       const open = header.classList.toggle('open');
       itemsEl.classList.toggle('open', open);
-      if (open) openSections.add(typeName);
-      else openSections.delete(typeName);
+      if (open) openSections.add(typeName); else openSections.delete(typeName);
     });
 
     section.appendChild(header);
@@ -469,10 +491,8 @@ function renderSidebar(data) {
 
 function escHtml(str) {
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // ---- Chat ----
@@ -504,15 +524,12 @@ function addTypingIndicator() {
   const msg = document.createElement('div');
   msg.className = 'msg assistant';
   msg.id = 'typing';
-
   const avatar = document.createElement('div');
   avatar.className = 'avatar';
   avatar.textContent = '🤖';
-
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
   bubble.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
-
   msg.appendChild(avatar);
   msg.appendChild(bubble);
   messagesEl.appendChild(msg);
@@ -528,13 +545,11 @@ function removeTypingIndicator() {
 function addToolCall(name, input) {
   const div = document.createElement('div');
   div.className = 'tool-call';
-  const inputStr = JSON.stringify(input, null, 0);
-  div.innerHTML = `<span class="tool-icon">⚙</span> <span class="tool-name">${escHtml(name)}</span> <span>${escHtml(inputStr)}</span>`;
+  div.innerHTML = `<span class="tool-icon">⚙</span> <span class="tool-name">${escHtml(name)}</span> <span>${escHtml(JSON.stringify(input))}</span>`;
   return div;
 }
 
 function markdownToHtml(text) {
-  // Very simple markdown: bold, code, bullets, line breaks
   return text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -561,7 +576,7 @@ async function sendMessage() {
   addMessage('user', text);
   history.push({ role: 'user', content: text });
 
-  const typingEl = addTypingIndicator();
+  addTypingIndicator();
 
   try {
     const res = await fetch('/api/chat', {
@@ -593,7 +608,6 @@ async function sendMessage() {
         if (evt.type === 'text') {
           if (!assistantBubble) {
             removeTypingIndicator();
-            const wrapper = document.createElement('div');
             const msg = document.createElement('div');
             msg.className = 'msg assistant';
             const av = document.createElement('div');
@@ -642,7 +656,7 @@ async function sendMessage() {
     }
   } catch (e) {
     removeTypingIndicator();
-    addMessage('assistant', 'Sorry, something went wrong. Please try again.');
+    addMessage('assistant', t('error_message'));
     console.error(e);
   }
 
@@ -655,10 +669,7 @@ async function sendMessage() {
 sendBtn.addEventListener('click', sendMessage);
 
 inputEl.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 
 inputEl.addEventListener('input', () => {
@@ -668,8 +679,17 @@ inputEl.addEventListener('input', () => {
 
 document.getElementById('refresh-btn').addEventListener('click', loadMedia);
 
+document.getElementById('lang-select').addEventListener('change', (e) => {
+  loadLocale(e.target.value).then(loadMedia);
+});
+
 // ---- Init ----
-loadMedia();
+
+const savedLang = localStorage.getItem('lang') || 'en';
+const langSelect = document.getElementById('lang-select');
+if (SUPPORTED_LANGS.includes(savedLang)) langSelect.value = savedLang;
+
+loadLocale(savedLang).then(loadMedia);
 </script>
 </body>
 </html>

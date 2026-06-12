@@ -1,0 +1,23 @@
+{
+  "page_title": "Media Recommendations",
+  "sidebar_heading": "My Media",
+  "refresh_title": "Refresh",
+  "no_types": "No media types yet.",
+  "no_types_hint": "Start chatting to add some!",
+  "chat_heading": "🎬 Media Recommendations",
+  "chat_subtitle": "Chat to track media, ratings, and get personalized recommendations.",
+  "welcome_intro": "Hi! I'm your media tracking assistant. I can help you:",
+  "welcome_items": [
+    { "label": "Add media types",     "example": "Add Movies and Games as media types" },
+    { "label": "Track media",         "example": "I watched Dune and gave it a 4.5, it's sci-fi" },
+    { "label": "Mark as unwatched",   "example": "Add Elden Ring to Games, haven't played it yet" },
+    { "label": "Get recommendations", "example": "Recommend me some horror movies" },
+    { "label": "Update ratings",      "example": "Update my Inception rating to 5" }
+  ],
+  "welcome_outro": "What would you like to do?",
+  "input_placeholder": "Ask me to track media or get recommendations...",
+  "send_title": "Send",
+  "no_items": "No items yet",
+  "unrated": "unrated",
+  "error_message": "Sorry, something went wrong. Please try again."
+}
