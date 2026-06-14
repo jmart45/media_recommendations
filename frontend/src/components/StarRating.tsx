@@ -23,34 +23,43 @@ function StarChar({ kind }: { kind: StarKind }) {
   )
 }
 
+/** Returns which visual state star `starIndex` (0-based) should show given a
+ *  display value of 0–5 in 0.5 steps. */
+export function kindFor(displayRating: number, starIndex: number): StarKind {
+  const full = starIndex + 1
+  if (displayRating >= full - 0.25) return 'full'
+  if (displayRating >= full - 0.75) return 'half'
+  return 'empty'
+}
+
 interface StarRatingProps {
   value: number | null
-  onChange: (rating: number) => void
+  onChange: (rating: number | null) => void
 }
 
 /** Interactive 0.5-step star rating. Mouse: hover the left/right half of each
  *  star. Keyboard: focus and use arrow keys (slider semantics). */
 export default function StarRating({ value, onChange }: StarRatingProps) {
   const [hover, setHover] = useState<number | null>(null)
-  const shown = hover ?? value ?? 0
-
-  function kindFor(starIndex: number): StarKind {
-    const full = starIndex + 1
-    if (shown >= full - 0.25) return 'full'
-    if (shown >= full - 0.75) return 'half'
-    return 'empty'
-  }
+  const displayRating = hover ?? value ?? 0
 
   function onKeyDown(e: KeyboardEvent) {
     const current = value ?? 0
-    let next = current
-    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = Math.min(5, current + 0.5)
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = Math.max(0, current - 0.5)
-    else if (e.key === 'Home') next = 0
-    else if (e.key === 'End') next = 5
-    else return
-    e.preventDefault()
-    if (next !== current) onChange(next)
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const next = Math.min(5, current + 0.5)
+      if (next !== current) onChange(next)
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      const next = Math.max(0, current - 0.5)
+      if (next !== current) onChange(next)
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      onChange(null)
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      if (current !== 5) onChange(5)
+    }
   }
 
   return (
@@ -86,7 +95,7 @@ export default function StarRating({ value, onChange }: StarRatingProps) {
             onMouseEnter={() => setHover(i + 1)}
             onClick={() => onChange(i + 1)}
           />
-          <StarChar kind={kindFor(i)} />
+          <StarChar kind={kindFor(displayRating, i)} />
         </span>
       ))}
     </div>

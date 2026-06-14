@@ -15,8 +15,16 @@ def _resolve_type_id(conn: sqlite3.Connection, media_type: str) -> Optional[int]
     return row["id"] if row else None
 
 
+def _validate_rating(rating: Optional[float]) -> Optional[str]:
+    if rating is not None and not (0 <= rating <= 5):
+        return f"Rating must be between 0 and 5, got {rating}."
+    return None
+
+
 def db_add_media_item(media_type: str, title: str, genre: Optional[str],
                       rating: Optional[float], notes: Optional[str]) -> dict:
+    if (msg := _validate_rating(rating)):
+        return err(msg)
     with get_conn() as conn:
         type_id = _resolve_type_id(conn, media_type)
         if type_id is None:
@@ -36,6 +44,8 @@ def db_add_media_item(media_type: str, title: str, genre: Optional[str],
 
 
 def db_update_media_rating(title: str, media_type: str, rating: Optional[float]) -> dict:
+    if (msg := _validate_rating(rating)):
+        return err(msg)
     with get_conn() as conn:
         type_id = _resolve_type_id(conn, media_type)
         if type_id is None:
@@ -145,8 +155,9 @@ def db_get_rated_media(media_type: str, genre: Optional[str] = None) -> dict:
         params: list = [type_id]
 
         if genre:
-            query += " AND genre LIKE ? COLLATE NOCASE"
-            params.append(f"%{genre}%")
+            query += " AND genre LIKE ? ESCAPE '\\' COLLATE NOCASE"
+            escaped = genre.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            params.append(f"%{escaped}%")
 
         query += " ORDER BY rating DESC"
         items = conn.execute(query, params).fetchall()

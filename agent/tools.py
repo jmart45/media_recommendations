@@ -1,10 +1,8 @@
 """Tool registry for the agent.
 
-Each tool is declared once, in TOOL_REGISTRY, bundling its API schema, its
-handler, and whether it mutates the database (mutations trigger a UI refresh).
-The structures the rest of the app consumes — TOOLS (schemas sent to the model),
-MUTATING_TOOLS, and execute_tool — are all derived from that single source, so
-adding a tool means adding one entry here.
+Each tool is declared once in TOOL_REGISTRY, bundling its schema, handler, and
+whether it mutates the database. GEMINI_TOOLS, MUTATING_TOOLS, and execute_tool
+are all derived from that single source — adding a tool means one entry here.
 """
 import json
 
@@ -17,38 +15,38 @@ from database import (
 
 # --- Handlers: each maps a validated tool input dict to a db_* call. ---
 
-def _add_media_type(i: dict) -> dict:
-    return db_add_media_type(i["name"])
+def _add_media_type(args: dict) -> dict:
+    return db_add_media_type(args["name"])
 
 
-def _remove_media_type(i: dict) -> dict:
-    return db_remove_media_type(i["name"])
+def _remove_media_type(args: dict) -> dict:
+    return db_remove_media_type(args["name"])
 
 
-def _add_media_item(i: dict) -> dict:
+def _add_media_item(args: dict) -> dict:
     return db_add_media_item(
-        i["media_type"], i["title"], i.get("genre"), i.get("rating"), i.get("notes")
+        args["media_type"], args["title"], args.get("genre"), args.get("rating"), args.get("notes")
     )
 
 
-def _update_media_rating(i: dict) -> dict:
-    return db_update_media_rating(i["title"], i["media_type"], i["rating"])
+def _update_media_rating(args: dict) -> dict:
+    return db_update_media_rating(args["title"], args["media_type"], args["rating"])
 
 
-def _remove_media_item(i: dict) -> dict:
-    return db_remove_media_item(i["title"], i["media_type"])
+def _remove_media_item(args: dict) -> dict:
+    return db_remove_media_item(args["title"], args["media_type"])
 
 
-def _add_media_items_bulk(i: dict) -> dict:
-    return db_add_media_items_bulk(i["media_type"], i.get("items", []))
+def _add_media_items_bulk(args: dict) -> dict:
+    return db_add_media_items_bulk(args["media_type"], args.get("items", []))
 
 
-def _list_media(i: dict) -> dict:
-    return db_list_media(i.get("media_type"))
+def _list_media(args: dict) -> dict:
+    return db_list_media(args.get("media_type"))
 
 
-def _get_rated_media(i: dict) -> dict:
-    return db_get_rated_media(i["media_type"], i.get("genre"))
+def _get_rated_media(args: dict) -> dict:
+    return db_get_rated_media(args["media_type"], args.get("genre"))
 
 
 # --- Registry: schema + handler + mutating flag, one entry per tool. ---
@@ -190,13 +188,6 @@ TOOL_REGISTRY = [
 
 # --- Derived views over the registry. ---
 
-# Schemas passed to the model (handler/mutating stripped out).
-TOOLS = [
-    {k: tool[k] for k in ("name", "description", "input_schema")}
-    for tool in TOOL_REGISTRY
-]
-
-# Tools that modify the database and should trigger a sidebar refresh in the UI.
 MUTATING_TOOLS = {tool["name"] for tool in TOOL_REGISTRY if tool["mutating"]}
 
 _HANDLERS = {tool["name"]: tool["handler"] for tool in TOOL_REGISTRY}
@@ -208,3 +199,37 @@ def execute_tool(name: str, inputs: dict) -> str:
     if handler is None:
         return json.dumps({"success": False, "message": f"Unknown tool: {name}"})
     return json.dumps(handler(inputs))
+
+
+# --- Gemini tool format conversion. ---
+
+def _convert_schema(schema: dict) -> dict:
+    """Convert Anthropic-style JSON schema to Gemini-compatible schema."""
+    result = {}
+    type_val = schema.get("type")
+    if isinstance(type_val, list):
+        # e.g. ["number", "null"] -> type: "number", nullable: True
+        non_null = [t for t in type_val if t != "null"]
+        result["type"] = non_null[0] if non_null else "string"
+        if "null" in type_val:
+            result["nullable"] = True
+    elif type_val:
+        result["type"] = type_val
+    for key in ("description", "enum", "required"):
+        if key in schema:
+            result[key] = schema[key]
+    if "properties" in schema:
+        result["properties"] = {k: _convert_schema(v) for k, v in schema["properties"].items()}
+    if "items" in schema:
+        result["items"] = _convert_schema(schema["items"])
+    return result
+
+
+GEMINI_TOOLS = [
+    {
+        "name": tool["name"],
+        "description": tool["description"],
+        "parameters": _convert_schema(tool["input_schema"]),
+    }
+    for tool in TOOL_REGISTRY
+]

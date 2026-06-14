@@ -8,37 +8,53 @@ export interface ToolCall {
   input: unknown
 }
 
-export interface ChatMessage {
+export interface ChatEntry {
   role: 'user' | 'assistant'
   text: string
   toolCalls: ToolCall[]
 }
 
 /** SSE events emitted by the backend agent loop. */
-type ChatEvent =
+export type ChatEvent =
   | { type: 'text'; content: string }
   | { type: 'tool_call'; name: string; input: unknown }
   | { type: 'refresh_media' }
-  | { type: 'max_tokens_warning' }
   | { type: 'done' }
 
 const STORAGE_KEY = 'chat_history'
 
-function loadHistory(): ChatMessage[] {
+export function loadHistory(): ChatEntry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? (parsed as ChatMessage[]) : []
+    return Array.isArray(parsed) ? (parsed as ChatEntry[]) : []
   } catch {
     return []
   }
 }
 
+/** Parse SSE lines from a buffer chunk. Returns parsed events and any
+ *  incomplete trailing line to carry into the next chunk. */
+export function parseSseLines(buffer: string): { events: ChatEvent[]; remainder: string } {
+  const lines = buffer.split('\n')
+  const remainder = lines.pop() ?? ''
+  const events: ChatEvent[] = []
+  for (const line of lines) {
+    if (!line.startsWith('data: ')) continue
+    try {
+      events.push(JSON.parse(line.slice(6)) as ChatEvent)
+    } catch {
+      // malformed line — skip
+    }
+  }
+  return { events, remainder }
+}
+
 export function useChat() {
   const { t } = useTranslation()
   const refreshLibrary = useRefreshLibrary()
-  const [messages, setMessages] = useState<ChatMessage[]>(loadHistory)
+  const [messages, setMessages] = useState<ChatEntry[]>(loadHistory)
   const [streaming, setStreaming] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -56,7 +72,7 @@ export function useChat() {
 
       // History sent to the API: all turns in order, including empty-text assistant
       // turns (tool-call-only responses). Filtering them out creates consecutive
-      // user turns which the Anthropic API rejects with 422.
+      // user turns which the Gemini API rejects.
       const apiHistory = [
         ...messages.map((m) => ({ role: m.role, content: m.text })),
         { role: 'user', content: text },
@@ -74,12 +90,26 @@ export function useChat() {
         assistantStarted = true
         setMessages((prev) => [...prev, { role: 'assistant', text: '', toolCalls: [] }])
       }
-      const updateLast = (fn: (m: ChatMessage) => ChatMessage) => {
+      const updateLast = (fn: (m: ChatEntry) => ChatEntry) => {
         setMessages((prev) => {
           const next = [...prev]
           next[next.length - 1] = fn(next[next.length - 1])
           return next
         })
+      }
+      const applyEvent = (evt: ChatEvent) => {
+        if (evt.type === 'text') {
+          ensureAssistant()
+          updateLast((m) => ({ ...m, text: m.text + evt.content }))
+        } else if (evt.type === 'tool_call') {
+          ensureAssistant()
+          updateLast((m) => ({
+            ...m,
+            toolCalls: [...m.toolCalls, { name: evt.name, input: evt.input }],
+          }))
+        } else if (evt.type === 'refresh_media') {
+          refreshLibrary()
+        }
       }
 
       try {
@@ -97,39 +127,18 @@ export function useChat() {
 
         for (;;) {
           const { done, value } = await reader.read()
-          if (done) break
-          buffer += decoder.decode(value, { stream: true })
-
-          const lines = buffer.split('\n')
-          buffer = lines.pop() ?? ''
-
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue
-            let evt: ChatEvent
-            try {
-              evt = JSON.parse(line.slice(6)) as ChatEvent
-            } catch {
-              continue
+          if (done) {
+            // Flush any remaining buffered line that arrived without a trailing \n
+            if (buffer) {
+              const { events } = parseSseLines(buffer + '\n')
+              for (const evt of events) applyEvent(evt)
             }
-
-            if (evt.type === 'text') {
-              ensureAssistant()
-              updateLast((m) => ({ ...m, text: m.text + evt.content }))
-            } else if (evt.type === 'tool_call') {
-              ensureAssistant()
-              updateLast((m) => ({
-                ...m,
-                toolCalls: [...m.toolCalls, { name: evt.name, input: evt.input }],
-              }))
-            } else if (evt.type === 'refresh_media') {
-              refreshLibrary()
-            } else if (evt.type === 'max_tokens_warning') {
-              setMessages((prev) => [
-                ...prev,
-                { role: 'assistant', text: t('max_tokens_error'), toolCalls: [] },
-              ])
-            }
+            break
           }
+          buffer += decoder.decode(value, { stream: true })
+          const { events, remainder } = parseSseLines(buffer)
+          buffer = remainder
+          for (const evt of events) applyEvent(evt)
         }
       } catch {
         if (!controller.signal.aborted) {

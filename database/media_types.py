@@ -11,7 +11,11 @@ def db_add_media_type(name: str) -> dict:
             conn.execute("INSERT INTO media_types (name) VALUES (?)", (name,))
             return ok(f"Added media type '{name}'.")
         except sqlite3.IntegrityError:
-            return err(f"Media type '{name}' already exists.")
+            existing = conn.execute(
+                "SELECT name FROM media_types WHERE name = ? COLLATE NOCASE", (name,)
+            ).fetchone()
+            canonical = existing["name"] if existing else name
+            return err(f"Media type '{canonical}' already exists.")
 
 
 def db_remove_media_type(name: str) -> dict:

@@ -62,8 +62,9 @@ def _resolve_db_path() -> str:
 
 @contextmanager
 def get_conn():
-    conn = sqlite3.connect(_resolve_db_path())
+    conn = sqlite3.connect(_resolve_db_path(), timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA foreign_keys = ON")
     try:
         yield conn

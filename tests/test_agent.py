@@ -2,7 +2,9 @@ import json
 import pytest
 import database
 from database import init_db, db_add_media_type
-from agent import sse, parse_tool_input, execute_tool, run_agent
+from agent import run_agent
+from agent.streaming import sse
+from agent.tools import execute_tool
 
 
 @pytest.fixture(autouse=True)
@@ -23,25 +25,6 @@ def test_sse_preserves_payload():
     result = sse(payload)
     parsed = json.loads(result.removeprefix("data: ").strip())
     assert parsed == payload
-
-
-# ---- parse_tool_input() ----
-
-def test_parse_tool_input_valid():
-    assert parse_tool_input('{"name": "Movies"}') == {"name": "Movies"}
-
-
-def test_parse_tool_input_empty_string():
-    assert parse_tool_input("") == {}
-
-
-def test_parse_tool_input_invalid_json():
-    assert parse_tool_input("{bad json}") == {}
-
-
-def test_parse_tool_input_nested():
-    raw = '{"media_type": "Movies", "rating": 4.5}'
-    assert parse_tool_input(raw) == {"media_type": "Movies", "rating": 4.5}
 
 
 # ---- execute_tool() ----
@@ -126,11 +109,6 @@ def test_execute_tool_add_media_items_bulk_skips_duplicates():
     assert result["added"] == 1
 
 
-def test_sse_max_tokens_warning():
-    result = sse({"type": "max_tokens_warning"})
-    parsed = json.loads(result.removeprefix("data: ").strip())
-    assert parsed == {"type": "max_tokens_warning"}
-
 
 def test_execute_tool_unknown_tool():
     result = json.loads(execute_tool("nonexistent_tool", {}))
@@ -139,7 +117,7 @@ def test_execute_tool_unknown_tool():
 
 @pytest.mark.anyio
 async def test_run_agent_missing_api_key(monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     events = [e async for e in run_agent([{"role": "user", "content": "hi"}])]
     payloads = [json.loads(e.removeprefix("data: ").strip()) for e in events]
     types = [p["type"] for p in payloads]

@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-table'
 
 import { useBrowse } from '../api/hooks'
+import { formatRating } from '../lib/format'
 
 interface Row {
   title: string
@@ -23,6 +24,22 @@ interface Row {
 }
 
 const columnHelper = createColumnHelper<Row>()
+const OVERVIEW_COL_ID = 'overview'
+
+export function filterRows(
+  rows: Row[],
+  search: string,
+  genre: string,
+  ratingMode: 'all' | 'rated' | 'unrated',
+): Row[] {
+  return rows.filter((r) => {
+    if (search && !r.title.toLowerCase().includes(search.trim().toLowerCase())) return false
+    if (genre && r.genre !== genre) return false
+    if (ratingMode === 'rated' && r.rating === null) return false
+    if (ratingMode === 'unrated' && r.rating !== null) return false
+    return true
+  })
+}
 
 /** Normalize empty values to undefined so TanStack's `sortUndefined: 'last'`
  *  keeps them at the bottom in both sort directions (original behavior). */
@@ -61,14 +78,7 @@ export default function BrowsePage() {
   )
 
   const filtered = useMemo(
-    () =>
-      allRows.filter((r) => {
-        if (search && !r.title.toLowerCase().includes(search.trim().toLowerCase())) return false
-        if (genre && r.genre !== genre) return false
-        if (ratingMode === 'rated' && r.rating === null) return false
-        if (ratingMode === 'unrated' && r.rating !== null) return false
-        return true
-      }),
+    () => filterRows(allRows, search, genre, ratingMode),
     [allRows, search, genre, ratingMode],
   )
 
@@ -121,7 +131,7 @@ export default function BrowsePage() {
         cell: ({ row }) =>
           row.original.rating !== null ? (
             <span className="whitespace-nowrap font-semibold text-star">
-              ★ {row.original.rating % 1 === 0 ? `${row.original.rating}.0` : row.original.rating}
+              {formatRating(row.original.rating)}
             </span>
           ) : (
             <span className="whitespace-nowrap italic text-muted">{t('unrated')}</span>
@@ -136,7 +146,7 @@ export default function BrowsePage() {
         ),
       }),
       columnHelper.display({
-        id: 'overview',
+        id: OVERVIEW_COL_ID,
         header: t('col_description'),
         cell: ({ row }) => (
           <span className="text-[0.82rem] leading-relaxed text-muted">
@@ -214,7 +224,7 @@ export default function BrowsePage() {
               {hg.headers.map((header) => {
                 const sortable = header.column.getCanSort()
                 const sorted = header.column.getIsSorted()
-                const isOverviewCol = header.id === 'overview'
+                const isOverviewCol = header.id === OVERVIEW_COL_ID
                 return (
                   <th
                     key={header.id}
@@ -234,16 +244,16 @@ export default function BrowsePage() {
         </thead>
         <tbody>
           {isLoading ? (
-            <StatusRow text={t('browse_loading')} />
+            <StatusRow text={t('browse_loading')} colSpan={columns.length} />
           ) : isError ? (
-            <StatusRow text={t('browse_type_not_found')} />
+            <StatusRow text={t('browse_type_not_found')} colSpan={columns.length} />
           ) : filtered.length === 0 ? (
-            <StatusRow text={t('browse_no_results')} />
+            <StatusRow text={t('browse_no_results')} colSpan={columns.length} />
           ) : (
             table.getRowModel().rows.map((row) => (
               <tr key={row.id} className="transition-colors hover:bg-surface2">
                 {row.getVisibleCells().map((cell) => {
-                  const isOverviewCol = cell.column.id === 'overview'
+                  const isOverviewCol = cell.column.id === OVERVIEW_COL_ID
                   return (
                     <td
                       key={cell.id}
@@ -268,10 +278,10 @@ export default function BrowsePage() {
   )
 }
 
-function StatusRow({ text }: { text: string }) {
+function StatusRow({ text, colSpan }: { text: string; colSpan: number }) {
   return (
     <tr>
-      <td colSpan={7} className="px-8 py-8 text-center italic text-muted">
+      <td colSpan={colSpan} className="px-8 py-8 text-center italic text-muted">
         {text}
       </td>
     </tr>

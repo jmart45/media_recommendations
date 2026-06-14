@@ -1,7 +1,8 @@
-anthropic
+google-genai
 fastapi
 uvicorn[standard]
 aiofiles
 httpx
+python-dotenv
 pytest
 pytest-asyncio

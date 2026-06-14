@@ -113,7 +113,15 @@ async def enrich_items(media_type: str, items: list[dict]) -> list[dict]:
                     meta = await fetch_metadata(client, item["title"], kind, api_key)
                 item["tmdb"] = meta or None
                 if meta is not None:
-                    db_set_metadata_cache(item["title"], kind, meta)
-            await asyncio.gather(*(fetch_one(i) for i in to_fetch))
+                    try:
+                        db_set_metadata_cache(item["title"], kind, meta)
+                    except Exception:
+                        pass
+            results = await asyncio.gather(
+                *(fetch_one(i) for i in to_fetch), return_exceptions=True
+            )
+            for item, result in zip(to_fetch, results):
+                if isinstance(result, BaseException):
+                    item["tmdb"] = None
 
     return out

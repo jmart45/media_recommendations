@@ -6,7 +6,6 @@ import en from './locales/en.json'
 import es from './locales/es.json'
 
 export const SUPPORTED_LANGS = ['en', 'es'] as const
-export type Lang = (typeof SUPPORTED_LANGS)[number]
 
 i18n
   .use(LanguageDetector)

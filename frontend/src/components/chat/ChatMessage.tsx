@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 
-import type { ChatMessage as ChatMessageType } from './useChat'
+import type { ChatEntry } from './useChat'
 import Markdown from './Markdown'
 
-export default function ChatMessage({ message }: { message: ChatMessageType }) {
+export default function ChatMessage({ message }: { message: ChatEntry }) {
   const { t } = useTranslation()
   const isUser = message.role === 'user'
 

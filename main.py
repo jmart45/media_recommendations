@@ -33,9 +33,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-def _ok_or_404(result: dict) -> dict:
-    """Unwrap a db_* result, raising 404 if it reports failure. The HTTP API has
-    no create endpoints, so the only failure mode here is a missing type/item."""
+def _unwrap_or_404(result: dict) -> dict:
+    """Unwrap a db_* result dict, raising 404 on failure."""
     if not result["success"]:
         raise HTTPException(status_code=404, detail=result["message"])
     return result
@@ -45,13 +44,13 @@ def _ok_or_404(result: dict) -> dict:
 
 @app.get("/api/media", response_model=MediaListResponse)
 async def api_list_media(media_type: Optional[str] = None):
-    result = _ok_or_404(db_list_media(media_type))
+    result = _unwrap_or_404(db_list_media(media_type))
     return {"data": result["data"]}
 
 
 @app.get("/api/browse", response_model=BrowseResponse)
 async def api_browse(media_type: str):
-    result = _ok_or_404(db_list_media(media_type))
+    result = _unwrap_or_404(db_list_media(media_type))
     # db_list_media returns data keyed by the canonical type name
     type_name, items = next(iter(result["data"].items()))
     enriched = await enrich_items(type_name, items)
@@ -70,19 +69,19 @@ async def api_list_media_types():
 
 @app.get("/api/item", response_model=ItemDetailResponse)
 async def api_get_item(media_type: str, title: str):
-    result = _ok_or_404(db_get_media_item(title, media_type))
+    result = _unwrap_or_404(db_get_media_item(title, media_type))
     return {"media_type": result["media_type"], "data": result["data"]}
 
 
 @app.patch("/api/item/rating", response_model=MessageResponse)
 async def api_update_rating(request: UpdateRatingRequest):
-    result = _ok_or_404(db_update_media_rating(request.title, request.media_type, request.rating))
+    result = _unwrap_or_404(db_update_media_rating(request.title, request.media_type, request.rating))
     return {"message": result["message"]}
 
 
 @app.delete("/api/item", response_model=MessageResponse)
 async def api_delete_item(media_type: str, title: str):
-    result = _ok_or_404(db_remove_media_item(title, media_type))
+    result = _unwrap_or_404(db_remove_media_item(title, media_type))
     return {"message": result["message"]}
 
 
@@ -100,7 +99,7 @@ async def chat(request: ChatRequest):
 if (DIST_DIR / "index.html").exists():
     app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
 
-    @app.get("/{full_path:path}")
+    @app.get("/{full_path:path}", include_in_schema=False)
     async def spa(full_path: str):
         if full_path.startswith("api/"):
             raise HTTPException(status_code=404, detail="Not found")

@@ -1,113 +1,107 @@
-"""The Claude agent loop: streams model output, executes tool calls, and feeds
+"""The Gemini agent loop: streams model output, executes tool calls, and feeds
 results back into the conversation, yielding SSE events to the browser."""
+import json
 import os
-from typing import Optional, AsyncGenerator
+from typing import AsyncGenerator
 
-import anthropic
+from google import genai
 
-from .streaming import sse, parse_tool_input
+from .streaming import sse
 from .prompts import SYSTEM_PROMPT
-from .tools import TOOLS, MUTATING_TOOLS, execute_tool
+from .tools import GEMINI_TOOLS, MUTATING_TOOLS, execute_tool
 
-MODEL = "claude-opus-4-8"
+MODEL = "gemini-2.0-flash"
+
+
+def _to_gemini_history(messages: list[dict]) -> list[dict]:
+    """Convert frontend messages (role/content format) to Gemini content format."""
+    result = []
+    for msg in messages:
+        role = "model" if msg["role"] == "assistant" else msg["role"]
+        content = msg["content"]
+        if not isinstance(content, str):
+            continue
+        # Gemini requires history to start with a user turn
+        if not result and role != "user":
+            continue
+        result.append({"role": role, "parts": [{"text": content}]})
+    return result
 
 
 async def run_agent(messages: list[dict]) -> AsyncGenerator[str, None]:
-    """Run the Claude agent loop, yielding SSE-formatted strings."""
-    if not os.environ.get("ANTHROPIC_API_KEY"):
+    """Run the Gemini agent loop, yielding SSE-formatted strings."""
+    if not os.environ.get("GEMINI_API_KEY"):
         yield sse({
             'type': 'text',
             'content': (
                 "**API key not configured.**\n\n"
-                "Add your Anthropic API key to `.env`:\n\n"
-                "```\nANTHROPIC_API_KEY=sk-ant-...\n```\n\n"
-                "Get a key at [console.anthropic.com](https://console.anthropic.com/settings/keys)."
+                "Add your Gemini API key to `.env`:\n\n"
+                "```\nGEMINI_API_KEY=...\n```\n\n"
+                "Get a free key at [aistudio.google.com](https://aistudio.google.com/apikey)."
             )
         })
         yield sse({'type': 'done'})
         return
 
-    client = anthropic.Anthropic()
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    history = _to_gemini_history(messages)
 
     while True:
         text_chunks = []
-        tool_uses = []
-        stop_reason = None
+        function_calls = []
 
-        with client.messages.stream(
+        stream = client.aio.models.generate_content_stream(
             model=MODEL,
-            max_tokens=16000,
-            system=SYSTEM_PROMPT,
-            tools=TOOLS,
-            thinking={"type": "adaptive"},
-            messages=messages,
-        ) as stream:
-            current_tool: Optional[dict] = None
+            contents=history,
+            config={
+                "system_instruction": SYSTEM_PROMPT,
+                "tools": [{"function_declarations": GEMINI_TOOLS}],
+            },
+        )
 
-            for event in stream:
-                if event.type == "content_block_start":
-                    block = event.content_block
-                    if block.type == "tool_use":
-                        current_tool = {"id": block.id, "name": block.name, "input_json": ""}
-                    elif block.type == "text":
-                        current_tool = None
+        async for chunk in stream:
+            if not chunk.candidates:
+                continue
+            candidate = chunk.candidates[0]
+            if not candidate.content or not candidate.content.parts:
+                continue
+            for part in candidate.content.parts:
+                if part.text:
+                    text_chunks.append(part.text)
+                    yield sse({'type': 'text', 'content': part.text})
+                elif part.function_call and part.function_call.name:
+                    fc = part.function_call
+                    function_calls.append({"name": fc.name, "args": dict(fc.args)})
 
-                elif event.type == "content_block_delta":
-                    delta = event.delta
-                    if delta.type == "text_delta":
-                        text_chunks.append(delta.text)
-                        yield sse({'type': 'text', 'content': delta.text})
-                    elif delta.type == "input_json_delta" and current_tool is not None:
-                        current_tool["input_json"] += delta.partial_json
-
-                elif event.type == "content_block_stop":
-                    if current_tool is not None:
-                        tool_uses.append(current_tool)
-                        current_tool = None
-
-                elif event.type == "message_delta":
-                    stop_reason = event.delta.stop_reason
-
-        # Build assistant message for conversation history
-        assistant_content = []
+        # Append model turn to history
+        model_parts = []
         if text_chunks:
-            assistant_content.append({"type": "text", "text": "".join(text_chunks)})
-        for tu in tool_uses:
-            assistant_content.append({
-                "type": "tool_use",
-                "id": tu["id"],
-                "name": tu["name"],
-                "input": parse_tool_input(tu["input_json"])
-            })
+            model_parts.append({"text": "".join(text_chunks)})
+        for fc in function_calls:
+            model_parts.append({"function_call": {"name": fc["name"], "args": fc["args"]}})
+        if model_parts:
+            history.append({"role": "model", "parts": model_parts})
 
-        messages = messages + [{"role": "assistant", "content": assistant_content}]
-
-        if stop_reason == "max_tokens":
-            yield sse({'type': 'max_tokens_warning'})
-            break
-
-        if stop_reason != "tool_use" or not tool_uses:
+        if not function_calls:
             break
 
         # Execute tools and feed results back into the conversation
-        tool_results = []
-        for tu in tool_uses:
-            parsed_input = parse_tool_input(tu["input_json"])
-            tool_name = tu["name"]
-
-            yield sse({'type': 'tool_call', 'name': tool_name, 'input': parsed_input})
-
-            result_str = execute_tool(tool_name, parsed_input)
-
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": tu["id"],
-                "content": result_str
+        result_parts = []
+        for fc in function_calls:
+            yield sse({'type': 'tool_call', 'name': fc["name"], 'input': fc["args"]})
+            try:
+                result = json.loads(execute_tool(fc["name"], fc["args"]))
+            except Exception as exc:
+                result = {"success": False, "message": str(exc)}
+            result_parts.append({
+                "function_response": {
+                    "name": fc["name"],
+                    "response": result,
+                }
             })
-
-            if tool_name in MUTATING_TOOLS:
+            if fc["name"] in MUTATING_TOOLS:
                 yield sse({'type': 'refresh_media'})
 
-        messages = messages + [{"role": "user", "content": tool_results}]
+        history.append({"role": "user", "parts": result_parts})
 
     yield sse({'type': 'done'})

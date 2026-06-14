@@ -4,7 +4,7 @@ from database import (
     init_db,
     db_add_media_type, db_remove_media_type, db_list_media_types,
     db_add_media_item, db_add_media_items_bulk, db_update_media_rating, db_remove_media_item,
-    db_list_media, db_get_rated_media,
+    db_list_media, db_get_rated_media, db_get_media_item,
 )
 
 
@@ -241,6 +241,50 @@ def test_bulk_insert_preserves_ratings(with_movies):
     by_title = {i["title"]: i for i in data}
     assert by_title["Dune"]["rating"] == 4.5
     assert by_title["Inception"]["rating"] is None
+
+
+# ---- Get single item ----
+
+def test_get_media_item_found(with_movies):
+    db_add_media_item("Movies", "Dune", "Sci-Fi", 4.5, "Great film")
+    result = db_get_media_item("Dune", "Movies")
+    assert result["success"] is True
+    assert result["data"]["title"] == "Dune"
+    assert result["data"]["genre"] == "Sci-Fi"
+    assert result["data"]["rating"] == 4.5
+
+
+def test_get_media_item_not_found(with_movies):
+    result = db_get_media_item("Ghost", "Movies")
+    assert result["success"] is False
+
+
+def test_get_media_item_unknown_type():
+    result = db_get_media_item("Dune", "Movies")
+    assert result["success"] is False
+
+
+# ---- Rating validation ----
+
+def test_add_media_item_rating_above_max_fails(with_movies):
+    result = db_add_media_item("Movies", "Dune", None, 6.0, None)
+    assert result["success"] is False
+
+
+def test_add_media_item_rating_below_min_fails(with_movies):
+    result = db_add_media_item("Movies", "Dune", None, -1.0, None)
+    assert result["success"] is False
+
+
+def test_add_media_item_rating_boundary_values(with_movies):
+    assert db_add_media_item("Movies", "Zero", None, 0.0, None)["success"] is True
+    assert db_add_media_item("Movies", "Five", None, 5.0, None)["success"] is True
+
+
+def test_update_rating_out_of_range_fails(with_movies):
+    db_add_media_item("Movies", "Dune", None, None, None)
+    result = db_update_media_rating("Dune", "Movies", 10.0)
+    assert result["success"] is False
 
 
 # ---- Cascade delete ----
