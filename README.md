@@ -1,54 +1,51 @@
 # Media Recommendations
 
-A personal media tracking and recommendation app powered by Claude. Chat naturally to track movies, games, music, books, or any other media — along with your ratings — and get personalized recommendations based on what you've enjoyed.
+A personal media tracking and recommendation app with an AI chat interface. Talk naturally to track movies, games, music, books, or any other media — with ratings and genres — and get personalized recommendations based on what you've enjoyed.
+
+Supports **Google Gemini 2.0 Flash** and **Groq (Llama 3.3 70B)** as LLM providers. Both have free tiers. Switch between them with a single `.env` setting.
 
 ## Features
 
 - **Chat interface** — add and manage media through natural conversation
-- **Media types** — create custom categories (Movies, Games, Music, Books, etc.)
-- **Ratings** — rate media 0–5, or mark items as not yet seen/played
-- **Genres** — tag items by genre and filter recommendations (e.g. "recommend me a horror movie")
-- **Recommendations** — Claude references your rated media to suggest what to watch or play next
-- **Media sidebar** — browse your full library at a glance, organized by type
-- **Browse page** — open a sortable, filterable table of any media type via the arrow link in the sidebar, with posters, descriptions, and ratings from [TMDB](https://www.themoviedb.org/) (optional)
+- **Custom media types** — create categories like Movies, Games, Music, Books, etc.
+- **Ratings** — rate items 0–5, or mark them as not yet seen/played
+- **Genres** — tag items by genre; filter recommendations by genre
+- **Recommendations** — the agent references your rated media to suggest what to try next
+- **Sidebar** — browse your full library at a glance, organized by type, with inline genre editing
+- **Browse page** — sortable, filterable table with posters, descriptions, and ratings from [TMDB](https://www.themoviedb.org/) (optional)
 
 ## Prerequisites
 
-- Python 3.12 or newer
-- Node.js 20 or newer (for the React frontend)
-- An Anthropic API key — get one at [console.anthropic.com](https://console.anthropic.com)
+- Python 3.12+
+- Node.js 20+
+- A free API key for at least one LLM provider:
+  - **Gemini** — [aistudio.google.com](https://aistudio.google.com) (default)
+  - **Groq** — [console.groq.com](https://console.groq.com)
 
 ## Setup
 
-**1. Clone or download this repository**
-
-**2. Install dependencies**
+**1. Install Python dependencies**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**3. Configure your API key**
+**2. Configure environment**
 
-Copy the example environment file and add your key:
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and replace `your-api-key-here` with your Anthropic API key:
+Create a `.env` file in the project root:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+LLM_PROVIDER=gemini        # or: groq
+GEMINI_API_KEY=...
+GROQ_API_KEY=...
+TMDB_API_KEY=...           # optional — enables posters and metadata on Browse page
 ```
 
-Optionally, add a [TMDB API key](https://www.themoviedb.org/settings/api) (free) to show posters, descriptions, and TMDB ratings on the Browse page. Either the v3 "API Key" or the v4 "API Read Access Token" works:
+`LLM_PROVIDER` defaults to `gemini` if omitted. Only the key for your chosen provider is required.
 
-```
-TMDB_API_KEY=...
-```
+Get a free TMDB key at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api).
 
-**4. Build the frontend**
+**3. Build the frontend**
 
 ```bash
 cd frontend
@@ -57,20 +54,19 @@ npm run build
 cd ..
 ```
 
-**5. Start the server**
+**4. Start the server**
 
 ```bash
 python -m uvicorn main:app --reload
 ```
 
-**6. Open the app**
+**5. Open the app**
 
-Navigate to [http://localhost:8000](http://localhost:8000) in your browser. FastAPI
-serves the built React app from `frontend/dist`.
+Navigate to [http://localhost:8000](http://localhost:8000). FastAPI serves the built React app from `frontend/dist`.
 
-### Development
+### Development mode
 
-For frontend work with hot-reload, run two processes: the API and the Vite dev server.
+For frontend hot-reload, run two processes:
 
 ```bash
 # terminal 1 — API
@@ -80,10 +76,9 @@ python -m uvicorn main:app --reload
 cd frontend && npm run dev
 ```
 
-Then open the Vite URL (default [http://localhost:5173](http://localhost:5173)).
+Then open [http://localhost:5173](http://localhost:5173).
 
-The frontend's TypeScript API types are generated from the backend's OpenAPI
-schema. To refresh them after changing the API, dump the schema and regenerate:
+To regenerate TypeScript API types after changing the backend API:
 
 ```bash
 python -c "import json, main; open('frontend/openapi.json','w').write(json.dumps(main.app.openapi()))"
@@ -92,12 +87,12 @@ cd frontend && npm run gen:api
 
 ## Usage Examples
 
-| What you want to do | What to say |
+| What you want | What to say |
 |---|---|
 | Add a media type | "Add Movies and Games as media types" |
 | Track something you watched | "I watched Inception, 5 out of 5, it's a thriller" |
 | Add something to watch later | "Add Dune Part Two to Movies, haven't seen it yet" |
-| Rate something you already added | "Update my Elden Ring rating to 4.5" |
+| Rate something | "Update my Elden Ring rating to 4.5" |
 | Get recommendations | "Recommend me some horror movies" |
 | Browse your library | "Show me everything in my Games list" |
 | Remove an item | "Remove Inception from Movies" |
@@ -107,25 +102,28 @@ cd frontend && npm run gen:api
 ```
 media_recommendations/
 ├── main.py            # FastAPI app: JSON API + serves the built SPA
-├── schemas.py         # Pydantic request/response models (the API contract)
-├── agent/             # Claude agent loop, tool registry, prompts
-├── database/          # SQLite: connection/schema + per-entity queries
+├── schemas.py         # Pydantic request/response models
+├── agent/
+│   ├── loop.py        # Provider selector (reads LLM_PROVIDER from env)
+│   ├── providers/     # gemini.py, groq.py — one file per LLM provider
+│   ├── tools.py       # Tool registry (schema + handler, derived for each provider format)
+│   ├── prompts.py     # System prompt
+│   └── streaming.py   # SSE helper
+├── database/          # SQLite: schema init + per-entity query functions
 ├── tmdb.py            # TMDB metadata lookup and caching
-├── frontend/          # React + TypeScript + Vite app
+├── frontend/          # React + TypeScript + Vite
 │   ├── src/
-│   │   ├── api/       # generated types + typed client + React Query hooks
-│   │   ├── components/# nav, sidebar, chat, item modal, star rating
+│   │   ├── api/       # Generated types + typed client + React Query hooks
+│   │   ├── components/# Chat, sidebar, item modal, star rating, nav
 │   │   ├── pages/     # ChatPage, BrowsePage
-│   │   └── locales/   # UI translations (en, es)
-│   └── dist/          # production build (generated; served by FastAPI)
-├── tests/             # Backend unit + API tests
-├── requirements.txt
-├── .env               # Your API keys (not committed)
-└── .env.example       # Template for API key setup
+│   │   └── locales/   # UI strings (en, es)
+│   └── dist/          # Production build (generated; served by FastAPI)
+├── tests/             # Backend unit tests (pytest)
+└── requirements.txt
 ```
 
 ## Notes
 
-- Your media library is stored locally in `media.db` — no data is sent anywhere except your chat messages to the Anthropic API.
-- The assistant is restricted to media tracking and recommendations. It will decline off-topic requests.
-- Each person running the app uses their own API key and gets their own local database.
+- Your media library is stored locally in `media.db`.
+- Chat messages are sent to whichever LLM provider you configure. No other data leaves your machine.
+- The assistant is scoped to media tracking and recommendations. It will decline off-topic requests.

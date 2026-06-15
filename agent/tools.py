@@ -219,7 +219,7 @@ def execute_tool(name: str, inputs: dict) -> str:
 # --- Gemini tool format conversion. ---
 
 def _convert_schema(schema: dict) -> dict:
-    """Convert Anthropic-style JSON schema to Gemini-compatible schema."""
+    """Convert the tool registry's JSON schema to Gemini-compatible schema."""
     result = {}
     type_val = schema.get("type")
     if isinstance(type_val, list):
