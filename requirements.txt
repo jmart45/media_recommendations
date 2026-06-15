@@ -1,0 +1,9 @@
+google-genai
+groq
+fastapi
+uvicorn[standard]
+aiofiles
+httpx
+python-dotenv
+pytest
+pytest-asyncio

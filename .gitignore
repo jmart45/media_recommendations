@@ -1,0 +1,5 @@
+.env
+media.db
+.claude/
+__pycache__/
+*.pyc
