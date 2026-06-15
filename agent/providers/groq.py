@@ -10,7 +10,10 @@ from ..prompts import SYSTEM_PROMPT
 from ..tools import GROQ_TOOLS, MUTATING_TOOLS, execute_tool
 
 MODEL = "llama-3.3-70b-versatile"
-_FAILED_FUNCTION_CALL = "Failed to call a function"
+_MALFORMED_TOOL_CALL_ERRORS = (
+    "Failed to call a function",
+    "tool call validation failed",
+)
 
 
 def _to_history(messages: list[dict]) -> list[dict]:
@@ -51,15 +54,12 @@ async def run(messages: list[dict]) -> AsyncGenerator[str, None]:
     history = _to_history(messages)
 
     try:
-        tools_executed = False
         while True:
             text_chunks: list[str] = []
             tool_call_accum: dict[int, dict] = {}
 
             try:
-                # After tools run, omit tools entirely so the model can't
-                # attempt another (often malformed) function call.
-                async for chunk in _stream_request(client, history, use_tools=not tools_executed):
+                async for chunk in _stream_request(client, history, use_tools=True):
                     delta = chunk.choices[0].delta
 
                     if delta.content:
@@ -79,9 +79,16 @@ async def run(messages: list[dict]) -> AsyncGenerator[str, None]:
                                 tool_call_accum[idx]['arguments'] += tc.function.arguments
 
             except groq_sdk.APIError as exc:
-                if _FAILED_FUNCTION_CALL in str(exc) and not tools_executed:
-                    # Model generated a malformed tool call — retry without tools
-                    # so it responds in plain text instead.
+                if any(msg in str(exc) for msg in _MALFORMED_TOOL_CALL_ERRORS):
+                    # Model generated a malformed tool call — inject a nudge and
+                    # retry without tools so it answers directly from its own knowledge.
+                    history.append({
+                        "role": "user",
+                        "content": (
+                            "Answer the question directly from your own knowledge. "
+                            "Do not mention tool calls or function names."
+                        ),
+                    })
                     async for chunk in _stream_request(client, history, use_tools=False):
                         content = chunk.choices[0].delta.content
                         if content:
@@ -127,7 +134,6 @@ async def run(messages: list[dict]) -> AsyncGenerator[str, None]:
                 })
                 if fc["name"] in MUTATING_TOOLS:
                     yield sse({'type': 'refresh_media'})
-            tools_executed = True
 
     except groq_sdk.RateLimitError:
         yield sse({
@@ -141,13 +147,7 @@ async def run(messages: list[dict]) -> AsyncGenerator[str, None]:
     except groq_sdk.AuthenticationError:
         yield sse({'type': 'text', 'content': "\n\n**Groq authentication failed.** Check your `GROQ_API_KEY` in `.env`."})
     except groq_sdk.APIError as exc:
-        if tools_executed:
-            async for chunk in _stream_request(client, history, use_tools=False):
-                content = chunk.choices[0].delta.content
-                if content:
-                    yield sse({'type': 'text', 'content': content})
-        else:
-            yield sse({'type': 'text', 'content': f"\n\n**Groq API error:** {exc}"})
+        yield sse({'type': 'text', 'content': f"\n\n**Groq API error:** {exc}"})
     except Exception as exc:
         yield sse({'type': 'text', 'content': f"\n\n**Unexpected error:** {exc}"})
 

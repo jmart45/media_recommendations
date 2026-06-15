@@ -1,4 +1,4 @@
-"""Gemini 2.0 Flash agent loop."""
+"""Gemini 3.5 Flash agent loop."""
 import json
 import os
 from typing import AsyncGenerator
@@ -10,7 +10,7 @@ from ..streaming import sse
 from ..prompts import SYSTEM_PROMPT
 from ..tools import GEMINI_TOOLS, MUTATING_TOOLS, execute_tool
 
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-3.5-flash"
 
 
 def _to_history(messages: list[dict]) -> list[dict]:
@@ -45,8 +45,8 @@ async def run(messages: list[dict]) -> AsyncGenerator[str, None]:
 
     try:
         while True:
-            text_chunks: list[str] = []
             function_calls: list[dict] = []
+            raw_parts: list = []
 
             stream = await client.aio.models.generate_content_stream(
                 model=MODEL,
@@ -64,20 +64,17 @@ async def run(messages: list[dict]) -> AsyncGenerator[str, None]:
                 if not candidate.content or not candidate.content.parts:
                     continue
                 for part in candidate.content.parts:
+                    raw_parts.append(part)
                     if part.text:
-                        text_chunks.append(part.text)
                         yield sse({'type': 'text', 'content': part.text})
                     elif part.function_call and part.function_call.name:
                         fc = part.function_call
                         function_calls.append({"name": fc.name, "args": dict(fc.args)})
 
-            model_parts = []
-            if text_chunks:
-                model_parts.append({"text": "".join(text_chunks)})
-            for fc in function_calls:
-                model_parts.append({"function_call": {"name": fc["name"], "args": fc["args"]}})
-            if model_parts:
-                history.append({"role": "model", "parts": model_parts})
+            # Preserve raw parts (including thought_signature fields) so Gemini
+            # models with thinking enabled accept the history on subsequent turns.
+            if raw_parts:
+                history.append({"role": "model", "parts": raw_parts})
 
             if not function_calls:
                 break

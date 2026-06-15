@@ -2,7 +2,7 @@
 
 A personal media tracking and recommendation app with an AI chat interface. Talk naturally to track movies, games, music, books, or any other media — with ratings and genres — and get personalized recommendations based on what you've enjoyed.
 
-Supports **Google Gemini 2.0 Flash** and **Groq (Llama 3.3 70B)** as LLM providers. Both have free tiers. Switch between them with a single `.env` setting.
+Supports **Google Gemini 3.5 Flash** and **Groq (Llama 3.3 70B)** as LLM providers. Both have free tiers. Switch between them with a single `.env` setting.
 
 ## Features
 
