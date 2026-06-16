@@ -45,38 +45,25 @@ TMDB_API_KEY=...           # optional — enables posters and metadata on Browse
 
 Get a free TMDB key at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api).
 
-**3. Build the frontend**
+**3. Install frontend dependencies**
 
 ```bash
-cd frontend
-npm install
-npm run build
-cd ..
+cd frontend && npm install && cd ..
 ```
 
-**4. Start the server**
+**4. Start the app**
 
 ```bash
-python -m uvicorn main:app --reload
+python start.py
 ```
 
-**5. Open the app**
+Opens the API on [http://localhost:8000](http://localhost:8000) and the Vite dev server with hot-reload on [http://localhost:5173](http://localhost:5173). Press Ctrl+C to stop both.
 
-Navigate to [http://localhost:8000](http://localhost:8000). FastAPI serves the built React app from `frontend/dist`.
-
-### Development mode
-
-For frontend hot-reload, run two processes:
+**Production mode** (builds the frontend, then serves everything from FastAPI on :8000):
 
 ```bash
-# terminal 1 — API
-python -m uvicorn main:app --reload
-
-# terminal 2 — frontend (proxies /api to :8000)
-cd frontend && npm run dev
+python start.py --prod
 ```
-
-Then open [http://localhost:5173](http://localhost:5173).
 
 To regenerate TypeScript API types after changing the backend API:
 
